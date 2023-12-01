@@ -1,0 +1,38 @@
+<users>
+    <user>
+        <firstname>John</firstname>
+        <telephone_number>123-456-7890</telephone_number>
+        <email>john@example.com</email>
+        <password>password123</password>
+        <role>user</role>
+        <created_at>2023-01-01 12:34:56</created_at>
+        <children>
+            <child>
+                <name>Emma</name>
+                <age>5</age>
+            </child>
+            <child>
+                <name>Liam</name>
+                <age>7</age>
+            </child>
+        </children>
+    </user>
+    <user>
+        <firstname>Alice</firstname>
+        <telephone_number>987-654-3210</telephone_number>
+        <email>alice@example.com</email>
+        <password>securepass</password>
+        <role>admin</role>
+        <created_at>2023-01-02 08:45:30</created_at>
+        <children>
+            <child>
+                <name>Olivia</name>
+                <age>3</age>
+            </child>
+            <child>
+                <name>Noah</name>
+                <age>6</age>
+            </child>
+        </children>
+    </user>
+</users>

@@ -1,0 +1,3 @@
+firstname;telephone_number;email;password;role;created_at;children
+John;123-456-7890;john@example.com;password123;user;2023-01-01 12:34:56;"Emma,5;Liam,7"
+Alice;987-654-3210;alice@example.com;securepass;admin;2023-01-02 08:45:30;"Olivia,3;Noah,6"
