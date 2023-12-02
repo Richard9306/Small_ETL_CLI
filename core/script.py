@@ -4,9 +4,11 @@ from pathlib import Path
 
 conn = sqlite3.connect('individuals.db')
 cursor = conn.cursor()
-with open(Path('data_json.json'), 'r') as json_file:
+path = Path('../files_to_load/data_json.json')
+with open(path, 'r') as json_file:
     data = json.load(json_file)
-    for individual_data in data['individuals']:
+    for individual_data in data:
+        print(individual_data['firstname'])
         cursor.execute("""
         INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -21,7 +23,7 @@ with open(Path('data_json.json'), 'r') as json_file:
         parent_id = cursor.lastrowid
         for child_data in individual_data['children']:
             cursor.execute("""
-            INSERT INTO children (parent_id, name, age)
+            INSERT INTO children (individual_id, name, age)
             VALUES (?, ?, ?)
             """, (
                 parent_id,
