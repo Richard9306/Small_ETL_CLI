@@ -22,5 +22,28 @@
             {"name": "Olivia", "age": 3},
             {"name": "Noah", "age": 6}
         ]
+    },
+    {
+        "firstname": "Bob",
+        "telephone_number": "",
+        "email": "bob@example.com",
+        "password": "",
+        "role": "user",
+        "created_at": "",
+        "children": [
+            {"name": "Sophia", "age": 4}
+        ]
+    },
+    {
+        "firstname": "Charlie",
+        "telephone_number": "555-1234",
+        "email": "",
+        "password": "",
+        "role": "",
+        "created_at": "2023-01-03 10:15:00",
+        "children": [
+            {"name": "Jack", "age": 8},
+            {"name": "Emily", "age": null}
+        ]
     }
 ]
