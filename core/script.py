@@ -3,6 +3,8 @@ import json
 import csv
 import xml.etree.ElementTree as ET
 from pathlib import Path
+import re
+from datetime import datetime
 
 
 
@@ -19,7 +21,6 @@ class DatabaseLoader:
             raise
     def insert_data_into_db(self,data):
         cursor = self.conn.cursor()
-        print(data)
         try:
 
             for individual_data in data:
@@ -47,12 +48,39 @@ class DatabaseLoader:
             self.conn.commit()
         except Exception as e:
             print(f"Błąd podczas zapisu danych do bazy: {e}")
+
     def close_connection(self):
         try:
             self.conn.close()
             print("Połączenie z bazą danych zostało zamknięte.")
         except Exception as e:
             print(f"Błąd podczas próby zamknięcia połączenia z bazą danych: {e}")
+
+    def validate_email(self, email):
+        if email.count('@') != 1:
+            return False
+        parts = email.split('@')
+        if parts[0].endswith('.') or parts[0].startswith('.') or parts[1].endswith('.')or parts[1].startswith('.'):
+            return False
+        if len(parts[0]) < 1:
+            return False
+        if parts[1].count('.'):
+            domain_parts = parts[1].split('.')
+        else:
+            return False
+        if len(domain_parts[0]) < 1:
+            return False
+        if len(domain_parts[-1]) not in range(1, 5):
+            return False
+        if not domain_parts[-1].isalnum():
+            return False
+        return email
+
+    def validate_telephone_number(self, telephone_nr):
+        cleaned_nr = re.sub(r'\D', '', telephone_nr)
+        cleaned_nr = cleaned_nr[-9:]
+        return cleaned_nr
+
 
 class JSONHandler:
     @staticmethod
@@ -64,6 +92,8 @@ class JSONHandler:
         except Exception as e:
             print(f"Błąd podczas zczytania pliku {file_path.name}: {e}")
             raise
+
+
 class CSVHandler:
     @staticmethod
     def read(file_path):
@@ -87,6 +117,7 @@ class CSVHandler:
         except Exception as e:
             print(f"Błąd podczas zczytania pliku {file_path.name}: {e}")
             raise
+
 
 class XMLHandler:
     @staticmethod
@@ -129,3 +160,10 @@ if __name__ == "__main__":
     load_data.insert_data_into_db(json_path)
     load_data.insert_data_into_db(xml_path)
     load_data.close_connection()
+    print(load_data.validate_email("john.doe.@.com"))
+    print(load_data.validate_email("john.doe@d.com"))
+    print(load_data.validate_telephone_number('+48123456789'))
+    print(load_data.validate_telephone_number('00123456789'))
+    print(load_data.validate_telephone_number('(48) 123456789'))
+    print(load_data.validate_telephone_number('123 456 789'))
+    print(load_data.validate_telephone_number('123456789'))

@@ -43,7 +43,7 @@
         "created_at": "2023-01-03 10:15:00",
         "children": [
             {"name": "Jack", "age": 8},
-            {"name": "Emily", "age": null}
+            {"name": "Emily"}
         ]
     }
 ]
