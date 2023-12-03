@@ -17,40 +17,43 @@ class DatabaseLoader:
             return self.conn
         except Exception as e:
             print(f"Błąd podczas tworzenia połączenia z bazą danych: {e}")
-            raise
-    def insert_data_into_db(self, data):
+            exit(1)
+    def insert_data_into_db(self, data, filepath):
         cursor = self.conn.cursor()
         try:
             valid_data = self.validate_data_and_omit_duplicates(data)
             if valid_data:
                 for individual_data in valid_data:
-                    cursor.execute("""
-                    INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """, (
-                        individual_data['firstname'],
-                        individual_data['telephone_number'],
-                        individual_data['email'],
-                        individual_data['password'],
-                        individual_data['role'],
-                        individual_data['created_at']
-                    ))
-                    individual_id = cursor.lastrowid
-                    for child_data in individual_data['children']:
+                    are_no_duplicates = self.are_no_duplicates_for_login_in_db(individual_data['email'], individual_data['telephone_number'], cursor)
+                    print(are_no_duplicates)
+                    if are_no_duplicates:
                         cursor.execute("""
-                        INSERT INTO children (individual_id, name, age)
-                        VALUES (?, ?, ?)
+                        INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         """, (
-                            individual_id,
-                            child_data['name'],
-                            child_data['age']
+                            individual_data['firstname'],
+                            individual_data['telephone_number'],
+                            individual_data['email'],
+                            individual_data['password'],
+                            individual_data['role'],
+                            individual_data['created_at']
                         ))
-                self.conn.commit()
+                        individual_id = cursor.lastrowid
+                        for child_data in individual_data['children']:
+                            cursor.execute("""
+                            INSERT INTO children (individual_id, name, age)
+                            VALUES (?, ?, ?)
+                            """, (
+                                individual_id,
+                                child_data['name'],
+                                child_data['age']
+                            ))
+                    self.conn.commit()
 
 
         except Exception as e:
-            print(f"Błąd podczas zapisu danych do bazy: {e}")
-            raise
+            print(f"Błąd podczas zapisu danych do bazy dla pliku {filepath.name}: {e}")
+            self.conn.rollback()
 
     def close_connection(self):
         try:
@@ -104,20 +107,26 @@ class DatabaseLoader:
                     valid_data.append(entry)
         return valid_data
 
-    def check_duplicates_in_db(self):
-        pass
+    def are_no_duplicates_for_login_in_db(self, email, telephone_number, cursor):
+        query = "SELECT * FROM individuals WHERE email = ? OR telephone_number = ?"
+        cursor.execute(query, (email, telephone_number))
+        result = cursor.fetchall()
+        return not result
 
 
 
 
 
 if __name__ == "__main__":
-    json_data = JSONHandler.read(Path('../files_to_load/data_json.json'))
-    csv_data = CSVHandler.read(Path('../files_to_load/data_csv.csv'))
-    xml_data = XMLHandler.read(Path('../files_to_load/data_xml.xml'))
+    json_path = Path('../files_to_load/data_json.json')
+    csv_path = Path('../files_to_load/data_csv.csv')
+    xml_path = Path('../files_to_load/data_xml.xml')
+    json_data = JSONHandler.read(json_path)
+    csv_data = CSVHandler.read(csv_path)
+    xml_data = XMLHandler.read(xml_path)
     load_data = DatabaseLoader()
     load_data.connect_db()
-    load_data.insert_data_into_db(csv_data)
-    load_data.insert_data_into_db(json_data)
-    load_data.insert_data_into_db(xml_data)
+    load_data.insert_data_into_db(csv_data, csv_path)
+    load_data.insert_data_into_db(json_data, json_path)
+    load_data.insert_data_into_db(xml_data, xml_path)
     load_data.close_connection()

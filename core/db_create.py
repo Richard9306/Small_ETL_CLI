@@ -6,8 +6,8 @@ sql_script = """
 CREATE TABLE IF NOT EXISTS individuals (
     individual_id INTEGER PRIMARY KEY AUTOINCREMENT,
     firstname TEXT,
-    telephone_number TEXT,
-    email TEXT,
+    telephone_number TEXT UNIQUE,
+    email TEXT UNIQUE,
     password TEXT,
     role TEXT,
     created_at DATETIME
