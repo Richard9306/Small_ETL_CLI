@@ -1,6 +1,8 @@
 import json
 import csv
 from xml.etree import ElementTree as ET
+
+
 class JSONHandler:
     @staticmethod
     def read(file_path):

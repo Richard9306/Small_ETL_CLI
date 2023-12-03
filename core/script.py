@@ -8,7 +8,8 @@ from json_xml_csv_handlers import JSONHandler, CSVHandler, XMLHandler
 class DatabaseLoader:
     def __init__(self):
         self.conn = None
-        # self.validate_data = None
+        self.unique_emails = []
+        self.unique_telephone_numbers = []
     def connect_db(self):
         try:
             self.conn = sqlite3.connect('individuals.db')
@@ -17,33 +18,36 @@ class DatabaseLoader:
         except Exception as e:
             print(f"Błąd podczas tworzenia połączenia z bazą danych: {e}")
             raise
-    def insert_data_into_db(self,data):
+    def insert_data_into_db(self, data):
         cursor = self.conn.cursor()
         try:
-            print(data)
-            for individual_data in data:
-                cursor.execute("""
-                INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    individual_data['firstname'],
-                    individual_data['telephone_number'],
-                    individual_data['email'],
-                    individual_data['password'],
-                    individual_data['role'],
-                    individual_data['created_at']
-                ))
-                individual_id = cursor.lastrowid
-                for child_data in individual_data['children']:
+            valid_data = self.validate_data_and_omit_duplicates(data)
+            if valid_data:
+                for individual_data in valid_data:
                     cursor.execute("""
-                    INSERT INTO children (individual_id, name, age)
-                    VALUES (?, ?, ?)
+                    INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """, (
-                        individual_id,
-                        child_data['name'],
-                        child_data['age']
+                        individual_data['firstname'],
+                        individual_data['telephone_number'],
+                        individual_data['email'],
+                        individual_data['password'],
+                        individual_data['role'],
+                        individual_data['created_at']
                     ))
-            self.conn.commit()
+                    individual_id = cursor.lastrowid
+                    for child_data in individual_data['children']:
+                        cursor.execute("""
+                        INSERT INTO children (individual_id, name, age)
+                        VALUES (?, ?, ?)
+                        """, (
+                            individual_id,
+                            child_data['name'],
+                            child_data['age']
+                        ))
+                self.conn.commit()
+
+
         except Exception as e:
             print(f"Błąd podczas zapisu danych do bazy: {e}")
             raise
@@ -86,23 +90,22 @@ class DatabaseLoader:
             return cleaned_nr
         else:
             return False
-    def validate_data(self, data):
+    def validate_data_and_omit_duplicates(self, data):
         if not data:
             return False
         valid_data = []
-        unique_entries = []
         for entry in data:
             validated_email = self.validate_email(entry['email'])
             validated_telephone_nr = self.validate_telephone_number(entry['telephone_number'])
             if validated_email and validated_telephone_nr:
-                unique_key = (validated_email, validated_telephone_nr)
-                if unique_key not in unique_entries:
-                    unique_entries.append(unique_key)
+                if validated_email not in self.unique_emails and validated_telephone_nr not in self.unique_telephone_numbers:
+                    self.unique_emails.append(validated_email)
+                    self.unique_telephone_numbers.append(validated_telephone_nr)
                     valid_data.append(entry)
-            else:
-                return False
-        print(valid_data)
         return valid_data
+
+    def check_duplicates_in_db(self):
+        pass
 
 
 
@@ -114,7 +117,7 @@ if __name__ == "__main__":
     xml_data = XMLHandler.read(Path('../files_to_load/data_xml.xml'))
     load_data = DatabaseLoader()
     load_data.connect_db()
-    load_data.insert_data_into_db(json_data)
+    load_data.insert_data_into_db(csv_data)
     load_data.insert_data_into_db(json_data)
     load_data.insert_data_into_db(xml_data)
     load_data.close_connection()
