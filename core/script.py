@@ -166,7 +166,7 @@ class DatabaseLoader:
 
 
 if __name__ == "__main__":
-    json_path = Path('../files_to_load/data_json.json')
+    json_path = Path('../tests/test_data_json.json')
     csv_path = Path('../files_to_load/data_csv.csv')
     xml_path = Path('../files_to_load/data_xml.xml')
     json_data = JSONHandler.read(json_path)
