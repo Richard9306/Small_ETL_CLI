@@ -37,9 +37,9 @@ def save_to_csv(data, filename):
         csv_writer.writerows(data)
 
 def save_to_xml(data, filename):
-    root = ET.Element('root')
+    root = ET.Element('individuals')
     for entry in data:
-        element = ET.SubElement(root, 'entry')
+        element = ET.SubElement(root, 'individual')
         for key, value in entry.items():
             sub_element = ET.SubElement(element, key)
             sub_element.text = str(value)
