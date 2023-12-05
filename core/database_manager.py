@@ -2,8 +2,7 @@ import sqlite3
 from pathlib import Path
 import re
 from json_xml_csv_handlers import JSONHandler, CSVHandler, XMLHandler
-
-
+from datetime import datetime
 
 class DatabaseManager:
     def __init__(self):
@@ -11,6 +10,7 @@ class DatabaseManager:
         self.unique_emails = []
         self.unique_telephone_numbers = []
         self.unique_entries = []
+
     def connect_db(self):
         try:
             self.conn = sqlite3.connect('individuals.db')
@@ -19,6 +19,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"Błąd podczas tworzenia połączenia z bazą danych: {e}")
             exit(1)
+
     def insert_data_into_db(self, data, filepath):
         cursor = self.conn.cursor()
         try:
@@ -49,7 +50,8 @@ class DatabaseManager:
                                 child_data['age']
                             ))
                         self.conn.commit()
-                        print(f"Dane z pliku {filepath.name} dla {individual_data['firstname'], individual_data['email']} wczytane do bazy.")
+                        print(
+                            f"Dane z pliku {filepath.name} dla {individual_data['firstname'], individual_data['email']} wczytane do bazy.")
 
 
         except sqlite3.IntegrityError as e:
@@ -69,7 +71,7 @@ class DatabaseManager:
         if email.count('@') != 1:
             return False
         parts = email.split('@')
-        if parts[0].endswith('.') or parts[0].startswith('.') or parts[1].endswith('.')or parts[1].startswith('.'):
+        if parts[0].endswith('.') or parts[0].startswith('.') or parts[1].endswith('.') or parts[1].startswith('.'):
             return False
         if len(parts[0]) < 1:
             return False
@@ -94,6 +96,7 @@ class DatabaseManager:
             return cleaned_nr
         else:
             return False
+
     def validate_data_and_check_duplicates(self, data):
         if not data:
             return False
@@ -112,12 +115,11 @@ class DatabaseManager:
                 else:
                     for u_entry in self.unique_entries:
                         if validated_email in u_entry.values() and validated_telephone_nr in u_entry.values():
-                            if u_entry['created_at'] < entry['created_at']:
+                            is_new_entry_newer = self.compare_datetimes(u_entry['created_at'], entry['created_at'])
+                            if is_new_entry_newer:
                                 valid_data.append(entry)
                                 self.unique_entries.remove(u_entry)
                                 self.unique_entries.append(entry)
-
-
 
         return valid_data
 
@@ -127,9 +129,8 @@ class DatabaseManager:
         result = cursor.fetchall()
         if result:
             result = result[0]
-            if result[6] < individual_data['created_at']:
-                print(individual_data)
-                print(result)
+            is_new_entry_newer = self.compare_datetimes(result[6], individual_data['created_at'])
+            if is_new_entry_newer:
                 cursor.execute("""
                 UPDATE individuals SET firstname = ?, telephone_number = ?, email = ?, password = ?, role = ?, created_at = ? WHERE individual_id = ?
                 """, (
@@ -154,15 +155,17 @@ class DatabaseManager:
                 self.conn.commit()
 
         return not result
+    def compare_datetimes(self, datetime1, datetime2):
+        datetime_format = '%Y-%m-%d %H:%M:%S'
+        datetime1 = datetime.strptime(datetime1, datetime_format)
+        datetime2 = datetime.strptime(datetime2, datetime_format)
+        return datetime1 < datetime2
 
     def clean_db(self):
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM individuals')
         cursor.execute('DELETE FROM children')
         self.conn.commit()
-
-
-
 
 
 if __name__ == "__main__":

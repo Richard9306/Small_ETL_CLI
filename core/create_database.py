@@ -10,7 +10,7 @@ def create_database():
         email TEXT UNIQUE,
         password TEXT,
         role TEXT,
-        created_at DATETIME
+        created_at DATETIME 
     );
     CREATE TABLE IF NOT EXISTS children (
         child_id INTEGER PRIMARY KEY AUTOINCREMENT,
