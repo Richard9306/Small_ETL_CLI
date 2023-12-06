@@ -4,6 +4,7 @@ import re
 from json_xml_csv_handlers import JSONHandler, CSVHandler, XMLHandler
 from datetime import datetime
 
+
 class DatabaseManager:
     def __init__(self):
         self.conn = None
@@ -13,11 +14,11 @@ class DatabaseManager:
 
     def connect_db(self):
         try:
-            self.conn = sqlite3.connect('individuals.db')
+            self.conn = sqlite3.connect("individuals.db")
             print("Connection with database is open.")
             return self.conn
         except Exception as e:
-            print(f"Error was occured while connecting to the database: {e}")
+            print(f"An error occured while connecting to the database: {e}")
             exit(1)
 
     def create_database(self):
@@ -49,36 +50,40 @@ class DatabaseManager:
             valid_data = self.validate_data_and_check_duplicates(data)
             if valid_data:
                 for individual_data in valid_data:
-                    are_any_duplicates = self.are_any_duplicates_for_login_in_db(individual_data, cursor)
+                    are_any_duplicates = self.are_any_duplicates_for_login_in_db(
+                        individual_data, cursor
+                    )
                     if are_any_duplicates:
-                        cursor.execute("""
+                        cursor.execute(
+                            """
                         INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
                         VALUES (?, ?, ?, ?, ?, ?)
-                        """, (
-                            individual_data['firstname'],
-                            individual_data['telephone_number'],
-                            individual_data['email'],
-                            individual_data['password'],
-                            individual_data['role'],
-                            individual_data['created_at']
-                        ))
+                        """,
+                            (
+                                individual_data["firstname"],
+                                individual_data["telephone_number"],
+                                individual_data["email"],
+                                individual_data["password"],
+                                individual_data["role"],
+                                individual_data["created_at"],
+                            ),
+                        )
                         individual_id = cursor.lastrowid
-                        for child_data in individual_data['children']:
-                            cursor.execute("""
+                        for child_data in individual_data["children"]:
+                            cursor.execute(
+                                """
                             INSERT INTO children (individual_id, name, age)
                             VALUES (?, ?, ?)
-                            """, (
-                                individual_id,
-                                child_data['name'],
-                                child_data['age']
-                            ))
+                            """,
+                                (individual_id, child_data["name"], child_data["age"]),
+                            )
                         self.conn.commit()
                         print(
-                            f"Dane z pliku {filepath.name} dla {individual_data['firstname'], individual_data['email']} wczytane do bazy.")
-
+                            f"Data from file: {filepath.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
+                        )
 
         except sqlite3.IntegrityError as e:
-            print(f"Błąd podczas zapisu danych do bazy z pliku {filepath.name}: {e}")
+            print(f"An error occurred during inserting data into database from file: {filepath.name}: {e}")
             self.conn.close()
             exit(1)
 
@@ -87,21 +92,26 @@ class DatabaseManager:
             self.conn.close()
             print("Connection with database is closed.")
         except Exception as e:
-            print(f"Error was occured while closing the connection with database: {e}")
+            print(f"An error occured while closing the connection with database: {e}")
             exit(1)
 
     def validate_email(self, email):
         if not email:
             return False
-        if email.count('@') != 1:
+        if email.count("@") != 1:
             return False
-        parts = email.split('@')
-        if parts[0].endswith('.') or parts[0].startswith('.') or parts[1].endswith('.') or parts[1].startswith('.'):
+        parts = email.split("@")
+        if (
+            parts[0].endswith(".")
+            or parts[0].startswith(".")
+            or parts[1].endswith(".")
+            or parts[1].startswith(".")
+        ):
             return False
         if len(parts[0]) < 1:
             return False
-        if parts[1].count('.'):
-            domain_parts = parts[1].split('.')
+        if parts[1].count("."):
+            domain_parts = parts[1].split(".")
         else:
             return False
         if len(domain_parts[0]) < 1:
@@ -115,7 +125,7 @@ class DatabaseManager:
     def validate_telephone_number(self, telephone_nr):
         if not telephone_nr:
             return False
-        cleaned_nr = re.sub(r'\D', '', telephone_nr)
+        cleaned_nr = re.sub(r"\D", "", telephone_nr)
         if len(cleaned_nr) >= 9:
             cleaned_nr = cleaned_nr[-9:]
             return cleaned_nr
@@ -127,20 +137,29 @@ class DatabaseManager:
             return False
         valid_data = []
         for entry in data:
-            validated_email = self.validate_email(entry['email'])
-            validated_telephone_nr = self.validate_telephone_number(entry['telephone_number'])
+            validated_email = self.validate_email(entry["email"])
+            validated_telephone_nr = self.validate_telephone_number(
+                entry["telephone_number"]
+            )
             if validated_email and validated_telephone_nr:
-
-                if validated_email not in self.unique_emails and validated_telephone_nr not in self.unique_telephone_numbers:
+                if (
+                    validated_email not in self.unique_emails
+                    and validated_telephone_nr not in self.unique_telephone_numbers
+                ):
                     self.unique_emails.append(validated_email)
                     self.unique_telephone_numbers.append(validated_telephone_nr)
-                    entry['telephone_number'] = validated_telephone_nr
+                    entry["telephone_number"] = validated_telephone_nr
                     self.unique_entries.append(entry)
                     valid_data.append(entry)
                 else:
                     for u_entry in self.unique_entries:
-                        if validated_email in u_entry.values() and validated_telephone_nr in u_entry.values():
-                            is_new_entry_newer = self.compare_datetimes(u_entry['created_at'], entry['created_at'])
+                        if (
+                            validated_email in u_entry.values()
+                            and validated_telephone_nr in u_entry.values()
+                        ):
+                            is_new_entry_newer = self.compare_datetimes(
+                                u_entry["created_at"], entry["created_at"]
+                            )
                             if is_new_entry_newer:
                                 valid_data.append(entry)
                                 self.unique_entries.remove(u_entry)
@@ -150,53 +169,62 @@ class DatabaseManager:
 
     def are_any_duplicates_for_login_in_db(self, individual_data, cursor):
         query = "SELECT * FROM individuals WHERE email = ? OR telephone_number = ?"
-        cursor.execute(query, (individual_data['email'], individual_data['telephone_number']))
+        cursor.execute(
+            query, (individual_data["email"], individual_data["telephone_number"])
+        )
         result = cursor.fetchall()
         if result:
             result = result[0]
-            is_new_entry_newer = self.compare_datetimes(result[6], individual_data['created_at'])
+            is_new_entry_newer = self.compare_datetimes(
+                result[6], individual_data["created_at"]
+            )
             if is_new_entry_newer:
-                cursor.execute("""
+                cursor.execute(
+                    """
                 UPDATE individuals SET firstname = ?, telephone_number = ?, email = ?, password = ?, role = ?, created_at = ? WHERE individual_id = ?
-                """, (
-                    individual_data['firstname'],
-                    individual_data['telephone_number'],
-                    individual_data['email'],
-                    individual_data['password'],
-                    individual_data['role'],
-                    individual_data['created_at'],
-                    result[0]
-                ))
-                cursor.execute(f"""DELETE FROM children WHERE individual_id = {result[0]}""")
-                for child_data in individual_data['children']:
-                    cursor.execute("""
+                """,
+                    (
+                        individual_data["firstname"],
+                        individual_data["telephone_number"],
+                        individual_data["email"],
+                        individual_data["password"],
+                        individual_data["role"],
+                        individual_data["created_at"],
+                        result[0],
+                    ),
+                )
+                cursor.execute(
+                    f"""DELETE FROM children WHERE individual_id = {result[0]}"""
+                )
+                for child_data in individual_data["children"]:
+                    cursor.execute(
+                        """
                     INSERT INTO children (individual_id, name, age)
                     VALUES (?, ?, ?)
-                    """, (
-                        result[0],
-                        child_data['name'],
-                        child_data['age']
-                    ))
+                    """,
+                        (result[0], child_data["name"], child_data["age"]),
+                    )
                 self.conn.commit()
 
         return not result
+
     def compare_datetimes(self, datetime1, datetime2):
-        datetime_format = '%Y-%m-%d %H:%M:%S'
+        datetime_format = "%Y-%m-%d %H:%M:%S"
         datetime1 = datetime.strptime(datetime1, datetime_format)
         datetime2 = datetime.strptime(datetime2, datetime_format)
         return datetime1 < datetime2
 
     def clean_db(self):
         cursor = self.conn.cursor()
-        cursor.execute('DELETE FROM individuals')
-        cursor.execute('DELETE FROM children')
+        cursor.execute("DELETE FROM individuals")
+        cursor.execute("DELETE FROM children")
         self.conn.commit()
 
 
 if __name__ == "__main__":
-    json_path = Path('../tests/test_data_json.json')
-    csv_path = Path('../files_to_load/data_csv.csv')
-    xml_path = Path('../files_to_load/data_xml.xml')
+    json_path = Path("../tests/test_data_json.json")
+    csv_path = Path("../files_to_load/data_csv.csv")
+    xml_path = Path("../files_to_load/data_xml.xml")
     json_data = JSONHandler.read(json_path)
     csv_data = CSVHandler.read(csv_path)
     xml_data = XMLHandler.read(xml_path)

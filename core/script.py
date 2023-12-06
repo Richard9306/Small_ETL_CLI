@@ -1,8 +1,9 @@
 import argparse
 from collections import defaultdict
 from database_manager import DatabaseManager
-class UserCommands(DatabaseManager):
 
+
+class UserCommands(DatabaseManager):
     def __init__(self, login, password):
         super().__init__()
         self.login = login
@@ -11,96 +12,198 @@ class UserCommands(DatabaseManager):
     def connect_db(self):
         super().connect_db()
 
-    def execute_commands(self, args):
-        if args.command == "print-children":
-            self.print_children()
-        elif args.command == "find-similar-children-by-age":
-            self.find_similar_children_by_age()
-        else:
-            print("Unknown command.")
-
     def login_into_db(self):
         try:
             cursor = self.conn.cursor()
-            cursor.execute("SELECT individual_id, role FROM individuals WHERE ( email = ? OR telephone_number = ?) AND password = ?",
-                           (self.login, self.login, self.password))
+            cursor.execute(
+                "SELECT individual_id, role FROM individuals WHERE ( email = ? OR telephone_number = ?) AND password = ?",
+                (self.login, self.login, self.password),
+            )
             user_info = cursor.fetchall()
-            user_info = user_info[0]
             if user_info:
+                user_info = user_info[0]
                 return user_info[0], cursor, user_info[1]
             else:
-                print("Wrong credentials.")
+                print("Invalid Login")
+                self.close_connection()
+                exit(0)
         except Exception as e:
-            print(f"Error was occured while trying to log in: {e}")
-            exit(1)
+            print(f"An error occured while trying to log in: {e}")
+            raise
 
     def print_children(self):
-        user_id, cursor, role = self.login_into_db()
-        user_id = str(user_id)
-        cursor.execute("SELECT name, age FROM children WHERE individual_id = ?", (user_id,))
-        children = cursor.fetchall()
-        if children:
-            print("UserCommands's children:")
-            for child in children:
-                print(f"{child[0]}, {child[1]}")
-        else:
-            print("UserCommands doesn't have children.")
+        try:
+            user_id, cursor, _ = self.login_into_db()
+            user_id = str(user_id)
+            cursor.execute(
+                "SELECT name, age FROM children WHERE individual_id = ?", (user_id,)
+            )
+            children = cursor.fetchall()
+            if children:
+                print("Your children:")
+                print("Name | age")
+                children.sort()
+                for child in children:
+                    print(f"{child[0]}, {child[1]}")
+            else:
+                print("You don't have children.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def find_similar_children_by_age(self):
-        user_id, cursor, role = self.login_into_db()
-        cursor.execute("SELECT name, age FROM children WHERE individual_id = ?", (user_id,))
-        user_children = cursor.fetchall()
-        if user_children:
-            query = """
-            SELECT 
-            i.firstname,
-            i.telephone_number,
-            c.name,
-            c.age
-            FROM 
-            individuals i
-            INNER JOIN children c ON i.individual_id = c.individual_id
-            WHERE
-            i.individual_id != ? AND c.age = ?
-            ORDER BY
-            c.name
-            """
-            all_matching_users = []
-            for child in user_children:
-                cursor.execute(query, (user_id, child[1]))
-                matching_users = cursor.fetchall()
-                all_matching_users.extend(matching_users)
-            if all_matching_users:
-                all_children_of_user = defaultdict(list)
-                for matching_user in all_matching_users:
-                    all_children_of_user[(matching_user[0], matching_user[1])].append((matching_user[2], matching_user[3]))
-                for key, value in all_children_of_user.items():
-                    join_children = "; ".join([f"{name}, {age}" for name, age in value])
-
-                    print(f"{key[0]}, {key[1]}: {join_children}")
+        try:
+            user_id, cursor, _ = self.login_into_db()
+            cursor.execute(
+                "SELECT name, age FROM children WHERE individual_id = ?", (user_id,)
+            )
+            user_children = cursor.fetchall()
+            if user_children:
+                query = """
+                SELECT 
+                i.firstname,
+                i.telephone_number,
+                c.name,
+                c.age
+                FROM 
+                individuals i
+                INNER JOIN children c ON i.individual_id = c.individual_id
+                WHERE
+                i.individual_id != ? AND c.age = ?
+                ORDER BY
+                c.name
+                """
+                all_matching_users = []
+                for child in user_children:
+                    cursor.execute(query, (user_id, child[1]))
+                    matching_users = cursor.fetchall()
+                    all_matching_users.extend(matching_users)
+                if all_matching_users:
+                    all_children_of_user = defaultdict(list)
+                    for matching_user in all_matching_users:
+                        all_children_of_user[
+                            (matching_user[0], matching_user[1])
+                        ].append((matching_user[2], matching_user[3]))
+                    print("Firstname | telephone number | children")
+                    for key, value in all_children_of_user.items():
+                        value.sort()
+                        join_children = "; ".join(
+                            [f"{name}, {age}" for name, age in value]
+                        )
+                        print(f"{key[0]}, {key[1]}: {join_children}")
+                else:
+                    print("No match.")
             else:
-                print("No match.")
-        else:
-            print("You don't have children.")
+                print("You don't have children.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
     def close_connection(self):
         super().close_connection()
+
+
 class AdminCommands(UserCommands):
     def __init__(self, login, password):
         super().__init__(login, password)
 
+    def login_into_db(self):
+        return super().login_into_db()
 
+    def print_all_accounts(self):
+        try:
+            _, cursor, role = self.login_into_db()
+            if role == "admin":
+                cursor.execute("SELECT COUNT(*) FROM individuals")
+                total_accounts = cursor.fetchone()[0]
+                print(total_accounts)
+            else:
+                print("Access denied. You don't have permissions.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise
+
+    def print_oldest_account(self):
+        try:
+            _, cursor, role = self.login_into_db()
+            if role == "admin":
+                cursor.execute(
+                    "SELECT firstname, email, created_at FROM individuals ORDER BY created_at LIMIT 1"
+                )
+                oldest_account = cursor.fetchall()[0]
+                print(f"name: {oldest_account[0]}")
+                print(f"email_address: {oldest_account[1]}")
+                print(f"created_at: {oldest_account[2]}")
+            else:
+                print("Access denied. You don't have permissions.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise
+
+    def group_children_by_age(self):
+        try:
+            _, cursor, role = self.login_into_db()
+            if role == "admin":
+                cursor.execute(
+                    "SELECT age, COUNT(age) as count FROM children GROUP BY age ORDER BY count"
+                )
+                amount_children_by_age = cursor.fetchall()
+                print(amount_children_by_age)
+                for age, count in amount_children_by_age:
+                    print(f"age: {age}, count: {count}")
+            else:
+                print("Access denied. You don't have permissions.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise
+
+
+def execute_commands(args):
+    user = None
+    admin = None
+    try:
+        if args.command == "print-children":
+            user = UserCommands(args.login, args.password)
+            user.connect_db()
+            user.print_children()
+        elif args.command == "find-similar-children-by-age":
+            user = UserCommands(args.login, args.password)
+            user.connect_db()
+            user.find_similar_children_by_age()
+        elif args.command == "print-all-accounts":
+            admin = AdminCommands(args.login, args.password)
+            admin.connect_db()
+            admin.print_all_accounts()
+        elif args.command == "print-oldest-account":
+            admin = AdminCommands(args.login, args.password)
+            admin.connect_db()
+            admin.print_oldest_account()
+        elif args.command == "group-by-age":
+            admin = AdminCommands(args.login, args.password)
+            admin.connect_db()
+            admin.group_children_by_age()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        if user is not None:
+            user.close_connection()
+        if admin is not None:
+            admin.close_connection()
 
 
 def parse_args():
-    pass
-
-if __name__ == "__main__":
+    CHOICES = [
+        "print-children",
+        "find-similar-children-by-age",
+        "print-all-accounts",
+        "print-oldest-account",
+        "group-by-age",
+    ]
     parser = argparse.ArgumentParser(description="Recruitment Task")
-    parser.add_argument("command", choices=["print-children", "find-similar-children-by-age"], help="Available commands")
+    parser.add_argument("command", choices=CHOICES, help="Available commands")
     parser.add_argument("--login", required=True, help="UserCommands login")
     parser.add_argument("--password", required=True, help="UserCommands password")
-    args = parser.parse_args()
-    user = UserCommands(args.login, args.password)
-    user.connect_db()
-    user.execute_commands(args)
-    user.close_connection()
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    execute_commands(args)
