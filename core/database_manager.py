@@ -43,6 +43,7 @@ class DatabaseManager:
         """
         cursor.executescript(creation_script)
         self.conn.commit()
+        print("Creating database: done.")
 
     def insert_data_into_db(self, data, filepath):
         cursor = self.conn.cursor()
@@ -81,9 +82,11 @@ class DatabaseManager:
                         print(
                             f"Data from file: {filepath.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
                         )
-
+                print(f"All data has been imported to database from {filepath.name}.")
         except sqlite3.IntegrityError as e:
-            print(f"An error occurred during inserting data into database from file: {filepath.name}: {e}")
+            print(
+                f"An error occurred during inserting data into database from file: {filepath.name}: {e}"
+            )
             self.conn.close()
             exit(1)
 
@@ -220,18 +223,25 @@ class DatabaseManager:
         cursor.execute("DELETE FROM children")
         self.conn.commit()
 
+    def load_data(self, json_path, csv_path, xml_path):
+        json_data = JSONHandler.read(json_path)
+        csv_data = CSVHandler.read(csv_path)
+        xml_data = XMLHandler.read(xml_path)
+        try:
+            self.insert_data_into_db(json_data, json_path)
+            self.insert_data_into_db(csv_data, csv_path)
+            self.insert_data_into_db(xml_data, xml_path)
+        except Exception as e:
+            print(f"An error occurred while loading data into database: {e}")
+
 
 if __name__ == "__main__":
     json_path = Path("../tests/test_data_json.json")
     csv_path = Path("../files_to_load/data_csv.csv")
     xml_path = Path("../files_to_load/data_xml.xml")
-    json_data = JSONHandler.read(json_path)
-    csv_data = CSVHandler.read(csv_path)
-    xml_data = XMLHandler.read(xml_path)
+
     load_data = DatabaseManager()
     load_data.connect_db()
-    load_data.insert_data_into_db(json_data, json_path)
-    load_data.insert_data_into_db(xml_data, xml_path)
-    load_data.insert_data_into_db(csv_data, csv_path)
+    load_data.load_data(json_path, csv_path, xml_path)
     # load_data.clean_db()
     load_data.close_connection()

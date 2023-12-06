@@ -11,7 +11,9 @@ class JSONHandler:
                 data = json.load(json_file)
             return data
         except Exception as e:
-            print(f"An error occurred during the operation on the {file_path.name}: {e}")
+            print(
+                f"An error occurred during the operation on the {file_path.name}: {e}"
+            )
             raise
 
 
@@ -36,7 +38,9 @@ class CSVHandler:
                     data.append(row_data)
             return data
         except Exception as e:
-            print(f"An error occurred during the operation on the {file_path.name}: {e}")
+            print(
+                f"An error occurred during the operation on the {file_path.name}: {e}"
+            )
             raise
 
 
@@ -69,5 +73,7 @@ class XMLHandler:
                     data.append(individual_data)
                 return data
         except Exception as e:
-            print(f"An error occurred during the operation on the {file_path.name}: {e}")
+            print(
+                f"An error occurred during the operation on the {file_path.name}: {e}"
+            )
             raise

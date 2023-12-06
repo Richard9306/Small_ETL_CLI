@@ -1,5 +1,7 @@
 import argparse
 from collections import defaultdict
+from pathlib import Path
+
 from database_manager import DatabaseManager
 
 
@@ -156,9 +158,10 @@ class AdminCommands(UserCommands):
             raise
 
 
-def execute_commands(args):
+def execute_commands(args, json_path, csv_path, xml_path):
     user = None
     admin = None
+    manager = None
     try:
         if args.command == "print-children":
             user = UserCommands(args.login, args.password)
@@ -180,6 +183,11 @@ def execute_commands(args):
             admin = AdminCommands(args.login, args.password)
             admin.connect_db()
             admin.group_children_by_age()
+        elif args.command == "create_database":
+            manager = DatabaseManager()
+            manager.connect_db()
+            manager.create_database()
+            manager.load_data(json_path, csv_path, xml_path)
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
@@ -187,6 +195,8 @@ def execute_commands(args):
             user.close_connection()
         if admin is not None:
             admin.close_connection()
+        if manager is not None:
+            manager.close_connection()
 
 
 def parse_args():
@@ -196,14 +206,22 @@ def parse_args():
         "print-all-accounts",
         "print-oldest-account",
         "group-by-age",
+        "create_database",
     ]
     parser = argparse.ArgumentParser(description="Recruitment Task")
     parser.add_argument("command", choices=CHOICES, help="Available commands")
-    parser.add_argument("--login", required=True, help="UserCommands login")
-    parser.add_argument("--password", required=True, help="UserCommands password")
-    return parser.parse_args()
+    parser.add_argument("--login", help="User login")
+    parser.add_argument("--password", help="User password")
+    args = parser.parse_args()
+    if args.command != "create_database" and (
+        args.login is None or args.password is None
+    ):
+        parser.error("Login and password are required for the specified command")
+    return args
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    execute_commands(args)
+    json_path = Path("../tests/test_data_json.json")
+    csv_path = Path("../files_to_load/data_csv.csv")
+    xml_path = Path("../files_to_load/data_xml.xml")
+    execute_commands(parse_args(), json_path, csv_path, xml_path)
