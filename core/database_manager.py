@@ -14,11 +14,34 @@ class DatabaseManager:
     def connect_db(self):
         try:
             self.conn = sqlite3.connect('individuals.db')
-            print("Utworzono połączenie z bazą danych.")
+            print("Connection with database is open.")
             return self.conn
         except Exception as e:
-            print(f"Błąd podczas tworzenia połączenia z bazą danych: {e}")
+            print(f"Error was occured while connecting to the database: {e}")
             exit(1)
+
+    def create_database(self):
+        cursor = self.conn.cursor()
+        creation_script = """
+        CREATE TABLE IF NOT EXISTS individuals (
+            individual_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            firstname TEXT,
+            telephone_number TEXT UNIQUE,
+            email TEXT UNIQUE,
+            password TEXT,
+            role TEXT,
+            created_at DATETIME 
+        );
+        CREATE TABLE IF NOT EXISTS children (
+            child_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            individual_id INTEGER NOT NULL,
+            name TEXT,
+            age INTEGER,
+            FOREIGN KEY (individual_id) REFERENCES individuals(individual_id)
+        );
+        """
+        cursor.executescript(creation_script)
+        self.conn.commit()
 
     def insert_data_into_db(self, data, filepath):
         cursor = self.conn.cursor()
@@ -57,13 +80,15 @@ class DatabaseManager:
         except sqlite3.IntegrityError as e:
             print(f"Błąd podczas zapisu danych do bazy z pliku {filepath.name}: {e}")
             self.conn.close()
+            exit(1)
 
     def close_connection(self):
         try:
             self.conn.close()
-            print("Połączenie z bazą danych zostało zamknięte.")
+            print("Connection with database is closed.")
         except Exception as e:
-            print(f"Błąd podczas próby zamknięcia połączenia z bazą danych: {e}")
+            print(f"Error was occured while closing the connection with database: {e}")
+            exit(1)
 
     def validate_email(self, email):
         if not email:

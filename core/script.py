@@ -1,20 +1,15 @@
 import argparse
-import sqlite3
+from collections import defaultdict
+from database_manager import DatabaseManager
+class UserCommands(DatabaseManager):
 
-
-class User:
     def __init__(self, login, password):
-        self.conn = None
+        super().__init__()
         self.login = login
         self.password = password
 
     def connect_db(self):
-        try:
-            self.conn = sqlite3.connect('individuals.db')
-            return self.conn
-        except Exception as e:
-            print(f"Error was occured while connecting to the database: {e}")
-            exit(1)
+        super().connect_db()
 
     def execute_commands(self, args):
         if args.command == "print-children":
@@ -45,11 +40,11 @@ class User:
         cursor.execute("SELECT name, age FROM children WHERE individual_id = ?", (user_id,))
         children = cursor.fetchall()
         if children:
-            print("User's children:")
+            print("UserCommands's children:")
             for child in children:
                 print(f"{child[0]}, {child[1]}")
         else:
-            print("User doesn't have children.")
+            print("UserCommands doesn't have children.")
 
     def find_similar_children_by_age(self):
         user_id, cursor, role = self.login_into_db()
@@ -64,7 +59,7 @@ class User:
             c.age
             FROM 
             individuals i
-            JOIN children c ON i.individual_id = c.individual_id
+            INNER JOIN children c ON i.individual_id = c.individual_id
             WHERE
             i.individual_id != ? AND c.age = ?
             ORDER BY
@@ -76,22 +71,20 @@ class User:
                 matching_users = cursor.fetchall()
                 all_matching_users.extend(matching_users)
             if all_matching_users:
-                print(all_matching_users)
+                all_children_of_user = defaultdict(list)
                 for matching_user in all_matching_users:
-                    # print(matching_user)
-                    print(f"{matching_user[0]}, {matching_user[1]}, {matching_user[2]}, {matching_user[3]}")
+                    all_children_of_user[(matching_user[0], matching_user[1])].append((matching_user[2], matching_user[3]))
+                for key, value in all_children_of_user.items():
+                    join_children = "; ".join([f"{name}, {age}" for name, age in value])
+
+                    print(f"{key[0]}, {key[1]}: {join_children}")
             else:
                 print("No match.")
         else:
             print("You don't have children.")
     def close_connection(self):
-        try:
-            self.conn.close()
-            print("Connection with database is closed.")
-        except Exception as e:
-            print(f"Error was occured while closing the connection with database: {e}")
-            exit(1)
-class Admin(User):
+        super().close_connection()
+class AdminCommands(UserCommands):
     def __init__(self, login, password):
         super().__init__(login, password)
 
@@ -104,10 +97,10 @@ def parse_args():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Recruitment Task")
     parser.add_argument("command", choices=["print-children", "find-similar-children-by-age"], help="Available commands")
-    parser.add_argument("--login", required=True, help="User login")
-    parser.add_argument("--password", required=True, help="User password")
+    parser.add_argument("--login", required=True, help="UserCommands login")
+    parser.add_argument("--password", required=True, help="UserCommands password")
     args = parser.parse_args()
-    user = User(args.login, args.password)
+    user = UserCommands(args.login, args.password)
     user.connect_db()
     user.execute_commands(args)
     user.close_connection()
