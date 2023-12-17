@@ -200,7 +200,7 @@ def execute_commands(args, json_path, csv_path, xml_path):
 
 
 def parse_args():
-    CHOICES = [
+    COMMANDS = [
         "print-children",
         "find-similar-children-by-age",
         "print-all-accounts",
@@ -209,7 +209,7 @@ def parse_args():
         "create_database",
     ]
     parser = argparse.ArgumentParser(description="Recruitment Task")
-    parser.add_argument("command", choices=CHOICES, help="Available commands")
+    parser.add_argument("command", choices=COMMANDS, help="Available commands")
     parser.add_argument("--login", help="User login")
     parser.add_argument("--password", help="User password")
     args = parser.parse_args()
