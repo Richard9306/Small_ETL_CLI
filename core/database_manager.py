@@ -1,7 +1,9 @@
 import sqlite3
 from pathlib import Path
 import re
-from json_xml_csv_handlers import JSONHandler, CSVHandler, XMLHandler
+from handlers.JSONHandler import JSONHandler
+from handlers.CSVHandler import CSVHandler
+from handlers.XMLHandler import XMLHandler
 from datetime import datetime
 
 
@@ -228,16 +230,21 @@ class DatabaseManager:
         allowed_extensions = ['.json', '.csv', '.xml']
         for file in files_path.iterdir():
             if file.is_file() and file.suffix in allowed_extensions:
-                if file.suffix == allowed_extensions[0]:
-                    file_data = JSONHandler.read(file)
-                elif file.suffix == allowed_extensions[1]:
-                    file_data = CSVHandler.read(file)
-                elif file.suffix == allowed_extensions[2]:
-                    file_data =XMLHandler.read(file)
+                try:
+                    if file.suffix == allowed_extensions[0]:
+                        file_data = JSONHandler.read(file)
+                    elif file.suffix == allowed_extensions[1]:
+                        file_data = CSVHandler.read(file)
+                    elif file.suffix == allowed_extensions[2]:
+                        file_data = XMLHandler.read(file)
+                except Exception as e:
+                    print(f"An error occurred during reading the file {file.name}: {e}")
+                    raise
                 try:
                     self.insert_data_into_db(file_data, file)
                 except Exception as e:
                     print(f"An error occurred while loading data into database: {e}")
+                    raise
 
 
 if __name__ == "__main__":
