@@ -51,10 +51,10 @@ class DatabaseManager:
             valid_data = self.validate_data_and_check_duplicates(data)
             if valid_data:
                 for individual_data in valid_data:
-                    are_any_duplicates = self.are_any_duplicates_for_login_in_db(
+                    duplicates_dont_exists = self.check_duplicates_and_update_newer_in_db(
                         individual_data, cursor
                     )
-                    if are_any_duplicates:
+                    if duplicates_dont_exists:
                         cursor.execute(
                             """
                         INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
@@ -83,6 +83,7 @@ class DatabaseManager:
                             f"Data from file: {filepath.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
                         )
                 print(f"All data has been imported to database from {filepath.name}.")
+            print(f"{filepath.name} has been checked.")
         except sqlite3.IntegrityError as e:
             print(
                 f"An error occurred during inserting data into database from file: {filepath.name}: {e}"
@@ -170,7 +171,7 @@ class DatabaseManager:
 
         return valid_data
 
-    def are_any_duplicates_for_login_in_db(self, individual_data, cursor):
+    def check_duplicates_and_update_newer_in_db(self, individual_data, cursor):
         query = "SELECT * FROM individuals WHERE email = ? OR telephone_number = ?"
         cursor.execute(
             query, (individual_data["email"], individual_data["telephone_number"])
@@ -223,25 +224,26 @@ class DatabaseManager:
         cursor.execute("DELETE FROM children")
         self.conn.commit()
 
-    def load_data(self, json_path, csv_path, xml_path):
-        json_data = JSONHandler.read(json_path)
-        csv_data = CSVHandler.read(csv_path)
-        xml_data = XMLHandler.read(xml_path)
-        try:
-            self.insert_data_into_db(json_data, json_path)
-            self.insert_data_into_db(csv_data, csv_path)
-            self.insert_data_into_db(xml_data, xml_path)
-        except Exception as e:
-            print(f"An error occurred while loading data into database: {e}")
+    def load_data(self, files_path):
+        allowed_extensions = ['.json', '.csv', '.xml']
+        for file in files_path.iterdir():
+            if file.is_file() and file.suffix in allowed_extensions:
+                if file.suffix == allowed_extensions[0]:
+                    file_data = JSONHandler.read(file)
+                elif file.suffix == allowed_extensions[1]:
+                    file_data = CSVHandler.read(file)
+                elif file.suffix == allowed_extensions[2]:
+                    file_data =XMLHandler.read(file)
+                try:
+                    self.insert_data_into_db(file_data, file)
+                except Exception as e:
+                    print(f"An error occurred while loading data into database: {e}")
 
 
 if __name__ == "__main__":
-    json_path = Path("../tests/test_data_json.json")
-    csv_path = Path("../files_to_load/data_csv.csv")
-    xml_path = Path("../files_to_load/data_xml.xml")
-
+    files_path = Path("../files_to_load/")
     load_data = DatabaseManager()
     load_data.connect_db()
-    load_data.load_data(json_path, csv_path, xml_path)
+    load_data.load_data(files_path)
     # load_data.clean_db()
     load_data.close_connection()

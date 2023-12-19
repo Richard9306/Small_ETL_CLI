@@ -28,11 +28,14 @@ class CSVHandler:
                     row_data = {}
                     for key, value in row.items():
                         if key == "children":
-                            children_data = []
-                            for child_info in value.split(";"):
-                                name, age = child_info.split(",")
-                                children_data.append({"name": name, "age": age})
-                            row_data[key] = children_data
+                            if value:
+                                children_data = []
+                                for child_info in value.split(";"):
+                                    name, age = child_info.split(",")
+                                    children_data.append({"name": name, "age": age})
+                                row_data[key] = children_data
+                            else:
+                                row_data[key] = ""
                         else:
                             row_data[key] = value
                     data.append(row_data)

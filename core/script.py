@@ -221,7 +221,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    json_path = Path("../tests/test_data_json.json")
+    json_path = Path("../files_to_load/test_data_json.json")
     csv_path = Path("../files_to_load/data_csv.csv")
     xml_path = Path("../files_to_load/data_xml.xml")
     execute_commands(parse_args(), json_path, csv_path, xml_path)
