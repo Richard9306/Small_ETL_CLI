@@ -21,7 +21,7 @@ class DatabaseManager:
             return self.conn
         except Exception as e:
             print(f"An error occured while connecting to the database: {e}")
-            exit(1)
+            raise
 
     def create_database(self):
         cursor = self.conn.cursor()
@@ -91,7 +91,7 @@ class DatabaseManager:
                 f"An error occurred during inserting data into database from file: {filepath.name}: {e}"
             )
             self.conn.close()
-            exit(1)
+            raise
 
     def close_connection(self):
         try:
@@ -99,7 +99,7 @@ class DatabaseManager:
             print("Connection with database is closed.")
         except Exception as e:
             print(f"An error occured while closing the connection with database: {e}")
-            exit(1)
+            raise
 
     def validate_email(self, email):
         if not email:
@@ -191,7 +191,7 @@ class DatabaseManager:
                 """,
                     (
                         individual_data["firstname"],
-                        individual_data["telephone_number"],
+                        self.validate_telephone_number(individual_data["telephone_number"]),
                         individual_data["email"],
                         individual_data["password"],
                         individual_data["role"],
@@ -226,31 +226,33 @@ class DatabaseManager:
         cursor.execute("DELETE FROM children")
         self.conn.commit()
 
-    def load_data(self, files_path):
+    def load_data(self, file_path):
         allowed_extensions = ['.json', '.csv', '.xml']
-        for file in files_path.iterdir():
-            if file.is_file() and file.suffix in allowed_extensions:
-                try:
-                    if file.suffix == allowed_extensions[0]:
-                        file_data = JSONHandler.read(file)
-                    elif file.suffix == allowed_extensions[1]:
-                        file_data = CSVHandler.read(file)
-                    elif file.suffix == allowed_extensions[2]:
-                        file_data = XMLHandler.read(file)
-                except Exception as e:
-                    print(f"An error occurred during reading the file {file.name}: {e}")
-                    raise
-                try:
-                    self.insert_data_into_db(file_data, file)
-                except Exception as e:
-                    print(f"An error occurred while loading data into database: {e}")
-                    raise
+        for ext in allowed_extensions:
+            for file in file_path.rglob(f'*{ext}'):
+                print(file)
+                if file.is_file() and file.suffix in allowed_extensions:
+                    try:
+                        if file.suffix == allowed_extensions[0]:
+                            file_data = JSONHandler.read(file)
+                        elif file.suffix == allowed_extensions[1]:
+                            file_data = CSVHandler.read(file)
+                        elif file.suffix == allowed_extensions[2]:
+                            file_data = XMLHandler.read(file)
+                    except Exception as e:
+                        print(f"An error occurred during reading the file {file.name}: {e}")
+                        raise
+                    try:
+                        self.insert_data_into_db(file_data, file)
+                    except Exception as e:
+                        print(f"An error occurred while loading data into database: {e}")
+                        raise
 
 
 if __name__ == "__main__":
-    files_path = Path("../files_to_load/")
+    file_path = Path("../data/")
     load_data = DatabaseManager()
     load_data.connect_db()
-    load_data.load_data(files_path)
-    # load_data.clean_db()
+    load_data.load_data(file_path)
+    load_data.clean_db()
     load_data.close_connection()

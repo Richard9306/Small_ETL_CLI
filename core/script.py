@@ -2,7 +2,7 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 
-from database_manager import DatabaseManager
+from DatabaseManager import DatabaseManager
 
 
 class UserCommands(DatabaseManager):
@@ -51,6 +51,7 @@ class UserCommands(DatabaseManager):
                 print("You don't have children.")
         except Exception as e:
             print(f"An error occurred: {e}")
+            raise
 
     def find_similar_children_by_age(self):
         try:
@@ -98,6 +99,7 @@ class UserCommands(DatabaseManager):
                 print("You don't have children.")
         except Exception as e:
             print(f"An error occurred: {e}")
+            raise
 
     def close_connection(self):
         super().close_connection()
@@ -158,7 +160,7 @@ class AdminCommands(UserCommands):
             raise
 
 
-def execute_commands(args, json_path, csv_path, xml_path):
+def execute_commands(args, file_path):
     user = None
     admin = None
     manager = None
@@ -187,9 +189,10 @@ def execute_commands(args, json_path, csv_path, xml_path):
             manager = DatabaseManager()
             manager.connect_db()
             manager.create_database()
-            manager.load_data(json_path, csv_path, xml_path)
+            manager.load_data(file_path)
     except Exception as e:
         print(f"An error occurred: {e}")
+        raise
     finally:
         if user is not None:
             user.close_connection()
@@ -221,7 +224,5 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    json_path = Path("../files_to_load/test_data_json.json")
-    csv_path = Path("../files_to_load/data_csv.csv")
-    xml_path = Path("../files_to_load/data_xml.xml")
-    execute_commands(parse_args(), json_path, csv_path, xml_path)
+    file_path = Path("../data/")
+    execute_commands(parse_args(), file_path)

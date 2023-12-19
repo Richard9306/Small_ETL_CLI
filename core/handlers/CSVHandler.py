@@ -1,8 +1,8 @@
-from HandlerInterface import HandlerInterface
+
 import csv
 
 
-class CSVHandler(HandlerInterface):
+class CSVHandler:
     @staticmethod
     def read(file_path):
         data = []
@@ -14,8 +14,9 @@ class CSVHandler(HandlerInterface):
                     if key == "children":
                         if value:
                             children_data = []
-                            for child_info in value.split(";"):
-                                name, age = child_info.split(",")
+                            for child_info in value.split(","):
+                                name, age = child_info.split()
+                                age = age.lstrip('(').rstrip(')')
                                 children_data.append({"name": name, "age": age})
                             row_data[key] = children_data
                         else:

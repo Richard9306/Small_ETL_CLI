@@ -1,15 +1,15 @@
-from HandlerInterface import HandlerInterface
+
 from xml.etree import ElementTree as ET
 
 
-class XMLHandler(HandlerInterface):
+class XMLHandler:
     @staticmethod
     def read(file_path):
         with open(file_path, "r") as xml_file:
             tree = ET.parse(xml_file)
             root = tree.getroot()
             data = []
-            for individual_element in root.findall("individual"):
+            for individual_element in root.findall("user"):
                 individual_data = {
                     "firstname": individual_element.find("firstname").text,
                     "telephone_number": individual_element.find(
