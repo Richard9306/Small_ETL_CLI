@@ -1,4 +1,3 @@
-
 from xml.etree import ElementTree as ET
 
 
@@ -9,24 +8,24 @@ class XMLHandler:
             tree = ET.parse(xml_file)
             root = tree.getroot()
             data = []
-            for individual_element in root.findall("user"):
-                individual_data = {
-                    "firstname": individual_element.find("firstname").text,
-                    "telephone_number": individual_element.find(
+            for user_element in root.findall("user"):
+                user_data = {
+                    "firstname": user_element.find("firstname").text,
+                    "telephone_number": user_element.find(
                         "telephone_number"
                     ).text,
-                    "email": individual_element.find("email").text,
-                    "password": individual_element.find("password").text,
-                    "role": individual_element.find("role").text,
-                    "created_at": individual_element.find("created_at").text,
+                    "email": user_element.find("email").text,
+                    "password": user_element.find("password").text,
+                    "role": user_element.find("role").text,
+                    "created_at": user_element.find("created_at").text,
                     "children": [],
                 }
-                for child_element in individual_element.findall("children/child"):
+                for child_element in user_element.findall("children/child"):
                     child_data = {
                         "name": child_element.find("name").text,
                         "age": child_element.find("age").text,
                     }
-                    individual_data["children"].append(child_data)
-                data.append(individual_data)
+                    user_data["children"].append(child_data)
+                data.append(user_data)
             return data
 

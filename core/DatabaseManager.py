@@ -5,6 +5,7 @@ from handlers.JSONHandler import JSONHandler
 from handlers.CSVHandler import CSVHandler
 from handlers.XMLHandler import XMLHandler
 from datetime import datetime
+import os
 
 
 class DatabaseManager:
@@ -47,7 +48,7 @@ class DatabaseManager:
         self.conn.commit()
         print("Creating database: done.")
 
-    def insert_data_into_db(self, data, filepath):
+    def insert_data_into_db(self, data, file_path):
         cursor = self.conn.cursor()
         try:
             valid_data = self.validate_data_and_check_duplicates(data)
@@ -82,13 +83,13 @@ class DatabaseManager:
                             )
                         self.conn.commit()
                         print(
-                            f"Data from file: {filepath.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
+                            f"Data from file: {file_path.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
                         )
-                print(f"All data has been imported to database from {filepath.name}.")
-            print(f"{filepath.name} has been checked.")
+                print(f"All data has been imported to database from {file_path.name}.")
+            print(f"{file_path.name} has been checked.")
         except sqlite3.IntegrityError as e:
             print(
-                f"An error occurred during inserting data into database from file: {filepath.name}: {e}"
+                f"An error occurred during inserting data into database from file: {file_path.name}: {e}"
             )
             self.conn.close()
             raise
@@ -167,6 +168,7 @@ class DatabaseManager:
                                 u_entry["created_at"], entry["created_at"]
                             )
                             if is_new_entry_newer:
+                                entry["telephone_number"] = validated_telephone_nr
                                 valid_data.append(entry)
                                 self.unique_entries.remove(u_entry)
                                 self.unique_entries.append(entry)
@@ -191,7 +193,7 @@ class DatabaseManager:
                 """,
                     (
                         individual_data["firstname"],
-                        self.validate_telephone_number(individual_data["telephone_number"]),
+                        individual_data["telephone_number"],
                         individual_data["email"],
                         individual_data["password"],
                         individual_data["role"],
@@ -211,6 +213,7 @@ class DatabaseManager:
                         (result[0], child_data["name"], child_data["age"]),
                     )
                 self.conn.commit()
+                print(f"Data for {individual_data['firstname']} with id: {result[0]} has been updated.")
 
         return not result
 
@@ -227,26 +230,26 @@ class DatabaseManager:
         self.conn.commit()
 
     def load_data(self, file_path):
-        allowed_extensions = ['.json', '.csv', '.xml']
-        for ext in allowed_extensions:
-            for file in file_path.rglob(f'*{ext}'):
-                print(file)
-                if file.is_file() and file.suffix in allowed_extensions:
-                    try:
-                        if file.suffix == allowed_extensions[0]:
-                            file_data = JSONHandler.read(file)
-                        elif file.suffix == allowed_extensions[1]:
-                            file_data = CSVHandler.read(file)
-                        elif file.suffix == allowed_extensions[2]:
-                            file_data = XMLHandler.read(file)
-                    except Exception as e:
-                        print(f"An error occurred during reading the file {file.name}: {e}")
-                        raise
-                    try:
-                        self.insert_data_into_db(file_data, file)
-                    except Exception as e:
-                        print(f"An error occurred while loading data into database: {e}")
-                        raise
+        for dir_, subdir, files in os.walk(file_path):
+            file_data = None
+            for file in files:
+                try:
+                    file_path = Path(dir_ + '/' + file)
+                    if file.endswith('.json'):
+                        file_data = JSONHandler.read(file_path)
+                    elif file.endswith('.csv'):
+                        file_data = CSVHandler.read(file_path)
+                    elif file.endswith('.xml'):
+                        file_data = XMLHandler.read(file_path)
+                except Exception as e:
+                    print(f"An error occurred during reading the file {file}: {e}")
+                    raise
+                try:
+                    print(type(file_data))
+                    self.insert_data_into_db(file_data, file_path)
+                except Exception as e:
+                    print(f"An error occurred while loading data into database: {e}")
+                    raise
 
 
 if __name__ == "__main__":
