@@ -1,8 +1,11 @@
 import sqlite3
 from pathlib import Path
 import re
-from json_xml_csv_handlers import JSONHandler, CSVHandler, XMLHandler
+from handlers.JSONHandler import JSONHandler
+from handlers.CSVHandler import CSVHandler
+from handlers.XMLHandler import XMLHandler
 from datetime import datetime
+import os
 
 
 class DatabaseManager:
@@ -19,7 +22,7 @@ class DatabaseManager:
             return self.conn
         except Exception as e:
             print(f"An error occured while connecting to the database: {e}")
-            exit(1)
+            raise
 
     def create_database(self):
         cursor = self.conn.cursor()
@@ -45,16 +48,16 @@ class DatabaseManager:
         self.conn.commit()
         print("Creating database: done.")
 
-    def insert_data_into_db(self, data, filepath):
+    def insert_data_into_db(self, data, file_path):
         cursor = self.conn.cursor()
         try:
             valid_data = self.validate_data_and_check_duplicates(data)
             if valid_data:
                 for individual_data in valid_data:
-                    are_any_duplicates = self.are_any_duplicates_for_login_in_db(
+                    duplicates_dont_exists = self.check_duplicates_and_update_newer_in_db(
                         individual_data, cursor
                     )
-                    if are_any_duplicates:
+                    if duplicates_dont_exists:
                         cursor.execute(
                             """
                         INSERT INTO individuals (firstname, telephone_number, email, password, role, created_at)
@@ -80,15 +83,16 @@ class DatabaseManager:
                             )
                         self.conn.commit()
                         print(
-                            f"Data from file: {filepath.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
+                            f"Data from file: {file_path.name} for {individual_data['firstname'], individual_data['email']} inserted into database."
                         )
-                print(f"All data has been imported to database from {filepath.name}.")
+                print(f"All data has been imported to database from {file_path.name}.")
+            print(f"{file_path.name} has been checked.")
         except sqlite3.IntegrityError as e:
             print(
-                f"An error occurred during inserting data into database from file: {filepath.name}: {e}"
+                f"An error occurred during inserting data into database from file: {file_path.name}: {e}"
             )
             self.conn.close()
-            exit(1)
+            raise
 
     def close_connection(self):
         try:
@@ -96,7 +100,7 @@ class DatabaseManager:
             print("Connection with database is closed.")
         except Exception as e:
             print(f"An error occured while closing the connection with database: {e}")
-            exit(1)
+            raise
 
     def validate_email(self, email):
         if not email:
@@ -164,13 +168,14 @@ class DatabaseManager:
                                 u_entry["created_at"], entry["created_at"]
                             )
                             if is_new_entry_newer:
+                                entry["telephone_number"] = validated_telephone_nr
                                 valid_data.append(entry)
                                 self.unique_entries.remove(u_entry)
                                 self.unique_entries.append(entry)
 
         return valid_data
 
-    def are_any_duplicates_for_login_in_db(self, individual_data, cursor):
+    def check_duplicates_and_update_newer_in_db(self, individual_data, cursor):
         query = "SELECT * FROM individuals WHERE email = ? OR telephone_number = ?"
         cursor.execute(
             query, (individual_data["email"], individual_data["telephone_number"])
@@ -208,6 +213,7 @@ class DatabaseManager:
                         (result[0], child_data["name"], child_data["age"]),
                     )
                 self.conn.commit()
+                print(f"Data for {individual_data['firstname']} with id: {result[0]} has been updated.")
 
         return not result
 
@@ -223,25 +229,33 @@ class DatabaseManager:
         cursor.execute("DELETE FROM children")
         self.conn.commit()
 
-    def load_data(self, json_path, csv_path, xml_path):
-        json_data = JSONHandler.read(json_path)
-        csv_data = CSVHandler.read(csv_path)
-        xml_data = XMLHandler.read(xml_path)
-        try:
-            self.insert_data_into_db(json_data, json_path)
-            self.insert_data_into_db(csv_data, csv_path)
-            self.insert_data_into_db(xml_data, xml_path)
-        except Exception as e:
-            print(f"An error occurred while loading data into database: {e}")
+    def load_data(self, file_path):
+        for dir_, subdir, files in os.walk(file_path):
+            file_data = None
+            for file in files:
+                try:
+                    file_path = Path(dir_ + '/' + file)
+                    if file.endswith('.json'):
+                        file_data = JSONHandler.read(file_path)
+                    elif file.endswith('.csv'):
+                        file_data = CSVHandler.read(file_path)
+                    elif file.endswith('.xml'):
+                        file_data = XMLHandler.read(file_path)
+                except Exception as e:
+                    print(f"An error occurred during reading the file {file}: {e}")
+                    raise
+                try:
+                    print(type(file_data))
+                    self.insert_data_into_db(file_data, file_path)
+                except Exception as e:
+                    print(f"An error occurred while loading data into database: {e}")
+                    raise
 
 
 if __name__ == "__main__":
-    json_path = Path("../tests/test_data_json.json")
-    csv_path = Path("../files_to_load/data_csv.csv")
-    xml_path = Path("../files_to_load/data_xml.xml")
-
+    file_path = Path("../data/")
     load_data = DatabaseManager()
     load_data.connect_db()
-    load_data.load_data(json_path, csv_path, xml_path)
-    # load_data.clean_db()
+    load_data.load_data(file_path)
+    load_data.clean_db()
     load_data.close_connection()
