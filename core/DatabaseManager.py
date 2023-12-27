@@ -183,9 +183,7 @@ class DatabaseManager:
         result = cursor.fetchall()
         if result:
             result = result[0]
-            is_new_entry_newer = self.compare_datetimes(
-                result[6], individual_data["created_at"]
-            )
+            is_new_entry_newer = self.compare_datetimes(result[6], individual_data["created_at"])
             if is_new_entry_newer:
                 cursor.execute(
                     """
@@ -230,7 +228,7 @@ class DatabaseManager:
         self.conn.commit()
 
     def load_data(self, file_path):
-        for dir_, subdir, files in os.walk(file_path):
+        for dir_, _, files in os.walk(file_path):
             file_data = None
             for file in files:
                 try:
